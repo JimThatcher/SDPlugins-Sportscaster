@@ -1,0 +1,104 @@
+{
+  "Actions": [
+    {
+      "Icon": "action/images/hilightimage", 
+      "Name": "Player Highlight", 
+      "States": [
+        {
+          "Image": "action/images/hilightshow",
+          "Name": "Show"
+        },
+        {
+          "Image": "action/images/hilighthide",
+          "Name": "Hide"
+        }
+      ], 
+      "Tooltip": "Player Highlight", 
+      "UUID": "com.evanscreekdev.showplayer.action"
+    },
+    {
+      "Icon": "action/images/sponsorimage", 
+      "Name": "Show Sponsor", 
+      "States": [
+        {
+          "Image": "action/images/sponsorshow",
+          "Name": "Show"
+        },
+        {
+          "Image": "action/images/sponsorhide",
+          "Name": "Hide"
+        }
+      ], 
+      "Tooltip": "Show sponsor advertisement", 
+      "UUID": "com.evanscreekdev.showsponsor.action"
+    },
+    {
+      "Icon": "action/images/scoreboardimage", 
+      "Name": "Show scoreboard", 
+      "States": [
+        {
+          "Image": "action/images/scoreboardshow",
+          "Name": "Show"
+        },
+        {
+          "Image": "action/images/scoreboardhide",
+          "Name": "Hide"
+        }
+      ], 
+      "Tooltip": "Show scoreboard overlay", 
+      "UUID": "com.evanscreekdev.scoreboard.show.action"
+    },
+    {
+      "Icon": "action/images/connectimage", 
+      "Name": "Connect scoreboard", 
+      "States": [
+        {
+          "Image": "action/images/connect",
+          "Name": "Connect"
+        },
+        {
+          "Image": "action/images/disconnect",
+          "Name": "Disconnect"
+        }
+      ], 
+      "Tooltip": "Connect scoreboard to console", 
+      "UUID": "com.evanscreekdev.scoreboard.connect.action"
+    },
+    {
+      "Icon": "action/images/virtualkey", 
+      "Name": "Virtual Key", 
+      "States": [
+        {
+          "Image": "action/images/vkeyaction"
+        }
+      ], 
+      "Tooltip": "Add key to virtual console", 
+      "UUID": "com.evanscreekdev.virtualkey.action"
+    }
+  ], 
+  "SDKVersion": 2,
+  "Author": "Evans Creek Dev", 
+  "CodePath": "index.html", 
+  "PropertyInspectorPath": "propertyinspector/index.html", 
+  "Description": "Game scoreboard, player highlights, and sponsor advertisement overlays", 
+  "Name": "Sports Stream manager", 
+  "Icon": "images/sportsicon",
+  "Category": "Sports Stream Manager",
+  "CategoryIcon": "images/plugin",
+  "URL": "https://github.com/JimThatcher/SDPlugins", 
+  "Version": "1.0.1",
+  "OS": [
+    {
+        "Platform": "mac", 
+        "MinimumVersion" : "10.11"
+    },
+    {
+        "Platform": "windows", 
+        "MinimumVersion" : "10"
+    }
+  ],
+  "Software": 
+    {
+        "MinimumVersion" : "4.1"
+  }
+}

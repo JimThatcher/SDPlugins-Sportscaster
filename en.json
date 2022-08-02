@@ -1,0 +1,27 @@
+{
+  "Description": "Game overlays for player highlights and sponsor advertisements", 
+  "Name": "Game overlay manager", 
+  "Category": "Sports Stream Overlays", 
+  "com.evanscreekdev.showplayer.action": {
+    "Name": "Player Highlight", 
+    "Tooltip": "Show highlight overlay for specified player"
+  },
+  "com.evanscreekdev.showsponsor.action": {
+    "Name": "Show sponsor", 
+    "Tooltip": "Show sponsor advertisement"
+  },
+  "com.evanscreekdev.scoreboard.show.action": {
+    "Name": "Show scoreboard", 
+    "Tooltip": "Show scoreboard overlay"
+  },
+  "com.evanscreekdev.scoreboard.connect.action": {
+    "Name": "Connect scoreboard", 
+    "Tooltip": "Connect scoreboard to console"
+  },
+  "Localization": {
+    "More info": "More info",
+    "Message": "Message",
+    "Click Me": "Click Me",
+    "Button": "Button"
+  }
+}

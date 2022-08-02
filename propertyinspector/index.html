@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,minimal-ui,viewport-fit=cover">
+        <meta name=apple-mobile-web-app-capable content=yes>
+        <meta name=apple-mobile-web-app-status-bar-style content=black>
+        <title>Evans Creek Sportscaster Property Inspector</title>
+        <link rel="stylesheet" href="css/sdpi.css">
+    </head>
+    <body>
+        <div class="sdpi-wrapper">
+
+          <!-- DROP HTML-STUFF BELOW -->
+          <details open id="globalSettings" class="noInnerMargins">
+            <summary>Global settings</summary>
+            <!-- Base URL for web service -->
+            <div class="sdpi-item">
+              <div class="sdpi-item-label" id="baseurl-label">Base URL</div>
+              <input class="sdpi-item-value" id="baseurl" type="text" value="" placeholder="http://127.0.0.1:2022/" required/>
+            </div>
+            <!-- Path or full URL player images -->
+            <div class="sdpi-item" id="playerPath">
+              <div class="sdpi-item-label" id="playerImagePath-label">Path for player images</div>
+              <input class="sdpi-item-value" id="playerImagePath" type="text" value="" />
+            </div>
+            <!-- Default timeout for player hilights -->
+            <div class="sdpi-item" id="playerTimeout">
+              <div class="sdpi-item-label" id="hilighttimeout-label">Timeout for hilights</div>
+              <input class="sdpi-item-value" id="hilightTimeout" type="text" value="" placeholder="6000" />
+            </div>
+            <!-- Path or full URL sponsor images -->
+            <div class="sdpi-item" id="sponsorPath">
+              <div class="sdpi-item-label" id="sponsorImagePath-label">Path for player images</div>
+              <input class="sdpi-item-value" id="sponsorImagePath" type="text" value="" />
+            </div>
+            <!-- Default timeout for ads -->
+            <div class="sdpi-item" id="sponsorTimeout">
+              <div class="sdpi-item-label" id="adtimeout-label">Timeout for ads</div>
+              <input class="sdpi-item-value" id="adTimeout" type="text" value="" placeholder="6000" />
+            </div>
+          </details>
+
+          <!-- Placeholder for more UI elements -->
+          <div id="placeholder"></div>
+              <!-- END OF SDPI-WRAPPER -->
+        </div>
+
+        <div class="sdpi-info-label hidden" style="top: -1000;" value=""></div>
+        <script src="js/common.js"></script>
+        <script src="js/common_pi.js"></script>
+        <script src="js/index_pi.js"></script>
+    </body>
+    </html>
