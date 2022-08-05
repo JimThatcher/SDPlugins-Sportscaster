@@ -52,6 +52,23 @@ function connected(jsn) {
         $SD.api.sendToPropertyInspector(context, globalSettings, "com.evanscreekdev.scoreboard.show.action");
         console.log('%c%s', 'color: white; background: black; font-size: 13px;', '[app.js]propertyInspectorDidAppear:');
     });
+
+    $SD.on('com.evanscreekdev.virtualkey.action.keyUp', (jsonObj) => virtualKeyAction.onVkeyKeyUp(jsonObj));
+    $SD.on('com.evanscreekdev.virtualkey.action.sendToPlugin', (jsonObj) => virtualKeyAction.onVkeySendToPlugin(jsonObj));
+    $SD.on('com.evanscreekdev.virtualkey.action.propertyInspectorDidAppear', (jsonObj) => {
+        var context = jsonObj.context;
+        $SD.api.sendToPropertyInspector(context, globalSettings, "com.evanscreekdev.virtualkey.action");
+        console.log('%c%s', 'color: white; background: black; font-size: 13px;', '[app.js]propertyInspectorDidAppear:');
+    });
+
+    $SD.on('com.evanscreekdev.clock.action.keyDown', (jsonObj) => clockKeyAction.onClockKeyDown(jsonObj));
+    $SD.on('com.evanscreekdev.clock.action.keyUp', (jsonObj) => clockKeyAction.onClockKeyUp(jsonObj));
+    $SD.on('com.evanscreekdev.clock.action.sendToPlugin', (jsonObj) => clockKeyAction.onClockSendToPlugin(jsonObj));
+    $SD.on('com.evanscreekdev.clock.action.propertyInspectorDidAppear', (jsonObj) => {
+        var context = jsonObj.context;
+        $SD.api.sendToPropertyInspector(context, globalSettings, "com.evanscreekdev.clock.action");
+        console.log('%c%s', 'color: white; background: black; font-size: 13px;', '[app.js]propertyInspectorDidAppear:');
+    });
 };
 
 function onDidReceiveGlobalSettings(jsonObj) {
@@ -119,6 +136,10 @@ function drawCircle(ctx, x, y, radius) {
 
 function drawImage(inContext, imageUrl) {
     let image = new Image();
+    image.onerror = function() {
+        console.log("Error loading image: " + imageUrl);
+        $SD.api.showAlert(inContext);
+    }
     image.src = imageUrl;
     image.onload = function() {
         console.log("drawImage:", imageUrl);
@@ -147,6 +168,7 @@ function drawImage(inContext, imageUrl) {
         drawCircle(ctx, 35, 35, 15);
         dataURL = canvas.toDataURL();
         $SD.api.setImage(inContext, dataURL, DestinationEnum.HARDWARE_AND_SOFTWARE, StateEnum.ENABLED);
+        $SD.api.showOk(inContext);
     }
 }
 
@@ -284,9 +306,10 @@ const hilightAction = {
         // let newSettings = {};
         // newSettings.playerid  = this.settings.playerid;
         let newSettings = {...this.settings, url: globalSettings.baseurl + "rest/db/player/" + this.settings.playerid};
+        console.log("newSettings: " + JSON.stringify(newSettings));
         // Call REST API to retreive full player details, then update the title
         // and image from data returned from REST API
-        fetch(newsettings.url)
+        fetch(newSettings.url)
         .then(function (response) {
             return response.json();
         }
@@ -320,7 +343,7 @@ const hilightAction = {
                 $SD.api.setTitle(jsn.context, data.jersey);
                 var restLoc = jsn.payload.settings.url.indexOf("rest");
                 var baseUrl = jsn.payload.settings.url.substring(0, restLoc);
-                // Now load the image into a canvas scaled to 72x72, convert to base64 and send setImage
+                // Now load the image into a canvas scaled to 144x144, convert to base64 and send setImage
                 drawImage(jsn.context, baseUrl + "players/images/" + data.image);
             })
             .catch(function (error) {
@@ -441,6 +464,127 @@ const scoreboardAction = {
         /**
          * This is a message sent directly from the Property Inspector 
          */ 
+
+        const sdpi_collection = Utils.getProp(jsn, 'payload.sdpi_collection', {});
+        const payload = Utils.getProp(jsn, 'payload', {});
+        if (sdpi_collection.value && sdpi_collection.value !== undefined) {
+            console.log('onSendToPlugin', { [sdpi_collection.key] : sdpi_collection.value });      
+        } else {
+            updateGlobalSettings(payload);
+        }
+    },
+};
+
+const virtualKeyAction = {
+
+    onVkeyKeyUp: function (jsn) {
+        // Pull baseURL from globalSettings, 
+        // Build the URL for the GET REST request to baseURL/{command}[/{param}]
+        console.log("Virtual Key onKeyUp", jsn);
+        const context = Utils.getProp(jsn, 'context', '');
+        let command = Utils.getProp(jsn, 'payload.settings.command', 0);
+        let params = Utils.getProp(jsn, 'payload.settings.param', 0);
+        if (globalSettings.baseurl && command !== 0) {
+            let url = globalSettings.baseurl + command + (params !== 0 ? '/' + params : '');
+            console.log("url: " + url);
+            fetch(url)
+            .then(function (response) {
+                if (!response.ok) {
+                    // Set state to 1 to indicate that the scoreboard is on
+                    console.log("GET virtual key response: " + response.status);
+                    $SD.api.showAlert(context);
+                }
+            })
+            .catch(function (err) {
+                console.log('error: ' + err);
+            });
+        } else {
+            console.log("No baseurl or settings", globalSettings, payload.settings);
+        }
+    },
+
+    onVkeySendToPlugin: function (jsn) {
+        /**
+         * This is a message sent directly from the Property Inspector 
+        **/ 
+
+        const sdpi_collection = Utils.getProp(jsn, 'payload.sdpi_collection', {});
+        const payload = Utils.getProp(jsn, 'payload', {});
+        if (sdpi_collection.value && sdpi_collection.value !== undefined) {
+            console.log('onSendToPlugin', { [sdpi_collection.key] : sdpi_collection.value });      
+        } else {
+            updateGlobalSettings(payload);
+        }
+    },
+};
+
+const clockKeyAction = {
+
+    onClockKeyDown: function (jsn) {
+        // We are only interested in the clock key down event to track double-clicks
+        // on the clock key to initiate the clock reset on standard double-click,
+        // or launch the clock time set view on double-click-and-hold.
+        console.log("Clock onKeyDown", jsn);
+        const context = Utils.getProp(jsn, 'context', '');
+        let command = 'api/clock';
+        let params = 'start';
+        let state = Utils.getProp(jsn, 'payload.state', 0);
+        let desiredState = Utils.getProp(jsn, 'payload.userDesiredState', 0);
+        let multiAction = Utils.getProp(jsn, 'payload.isInMultiAction', false);
+        if (multiAction) {
+            state = (desiredState == 0) ? 1 : 0;
+        }
+        if (state == 1) {
+            params = 'stop';
+        }
+    },
+
+    onClockKeyUp: function (jsn) {
+        // Pull baseURL from globalSettings, 
+        // Build the URL for the GET REST request to baseURL/{command}[/{param}]
+        console.log("Clock onKeyUp", jsn);
+        const context = Utils.getProp(jsn, 'context', '');
+        let command = 'api/clock';
+        let params = 'start';
+        let state = Utils.getProp(jsn, 'payload.state', 0);
+        let desiredState = Utils.getProp(jsn, 'payload.userDesiredState', 0);
+        let multiAction = Utils.getProp(jsn, 'payload.isInMultiAction', false);
+        if (multiAction) {
+            state = (desiredState == 0) ? 1 : 0;
+        }
+        if (state == 1) {
+            params = 'stop';
+        }
+        if (globalSettings.baseurl) {
+            let url = globalSettings.baseurl + command + (params !== 0 ? '/' + params : '');
+            console.log("url: " + url);
+            fetch(url)
+            .then(function (response) {
+                if (!response.ok) {
+                    // Set state to 1 to indicate that the scoreboard is on
+                    console.log("GET clock response: " + response.status);
+                    $SD.api.showAlert(context);
+                } else {
+                    if (state == 0) {
+                        $SD.api.setState(context, 1);
+                    } else {
+                        $SD.api.setState(context, 0);
+                    }
+                    console.log("GET clock response: " + response.status);
+                }
+            })
+            .catch(function (err) {
+                console.log('error: ' + err);
+            });
+        } else {
+            console.log("No baseurl", globalSettings);
+        }
+    },
+
+    onClockSendToPlugin: function (jsn) {
+        /**
+         * This is a message sent directly from the Property Inspector 
+        **/ 
 
         const sdpi_collection = Utils.getProp(jsn, 'payload.sdpi_collection', {});
         const payload = Utils.getProp(jsn, 'payload', {});

@@ -65,6 +65,22 @@
       "UUID": "com.evanscreekdev.scoreboard.connect.action"
     },
     {
+      "Icon": "action/images/clockimage", 
+      "Name": "Virtual clock", 
+      "States": [
+        {
+          "Image": "action/images/clockstart",
+          "Name": "Start"
+        },
+        {
+          "Image": "action/images/clockstop",
+          "Name": "Stop"
+        }
+      ], 
+      "Tooltip": "Start/stop virtual clock", 
+      "UUID": "com.evanscreekdev.clock.action"
+    },
+    {
       "Icon": "action/images/virtualkey", 
       "Name": "Virtual Key", 
       "States": [

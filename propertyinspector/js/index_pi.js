@@ -35,6 +35,7 @@ let sdpiWrapper = document.querySelector('.sdpi-wrapper');
 
 let settings;
 let globalSettings;
+let action;
 
  /**
   * The 'connected' event is the first event sent to Property Inspector, after it's instance
@@ -76,9 +77,9 @@ $SD.on('connected', (jsn) => {
         </div>
         `;
         var element = document.getElementById('playerPath');
-        element.style.display = 'block';
+        element.style.display = 'flex';
         element = document.getElementById('playerTimeout');
-        element.style.display = 'block';
+        element.style.display = 'flex';
     } else if (action === 'com.evanscreekdev.showsponsor.action') {
         // Add select field for sponsor to show
         document.getElementById('placeholder').innerHTML = `
@@ -90,9 +91,9 @@ $SD.on('connected', (jsn) => {
         </div>
         `;
         var element = document.getElementById('sponsorPath');
-        element.style.display = 'block';
+        element.style.display = 'flex';
         element = document.getElementById('sponsorTimeout');
-        element.style.display = 'block';
+        element.style.display = 'flex';
     } else if (action === 'com.evanscreekdev.virtualkey.action') {
         // Add select field for key type and input for parameters
         document.getElementById('placeholder').innerHTML = `
@@ -100,35 +101,41 @@ $SD.on('connected', (jsn) => {
             <div class='sdpi-item-label' id='keytype-label'>Select key operation</div>
             <select class='sdpi-item-value select' id='keytype'>
                 <optgroup label='Clock'>
-                    <option id='clock-start' value='api/clockdata/start'>Start clock</option>
-                    <option id='clock-stop' value='api/clockdata/stop'>Stop clock</option>
-                    <option id='clock-reset' value='api/clockdata/reset'>Reset clock</option>
-                    <option id='clock-set' value='api/clockdata/set'>Set clock</option>
+                    <option value='api/clock/start'>Start clock</option>
+                    <option value='api/clock/stop'>Stop clock</option>
+                    <option value='api/clock/Reset'>Reset clock</option>
+                    <option value='api/clock/Setup'>Set clock</option>
+                    <option value='api/clock/Adjust'>Adjust clock</option>
                 </optgroup>
                 <optgroup label='Common'>
-                    <option id='home-score' value='api/scoredata/HomeScore'>Home score</option>
-                    <option id='guest-score' value='api/scoredata/GuestScore'>Away score</option>
-                    <option id='home-tol' value='api/scoredata/HomeTOL'>Home TOL</option>
-                    <option id='guest-tol' value='api/scoredata/GuestTOL'>Away TOL</option>
-                    <option id='period' value='api/scoredata/Quarter'>Period</option>
+                    <option value='api/score/HomeScore'>Home score</option>
+                    <option value='api/score/GuestScore'>Away score</option>
+                    <option value='api/score/HomeTOL'>Home TOL</option>
+                    <option value='api/score/GuestTOL'>Away TOL</option>
+                    <option value='api/score/Quarter'>Period</option>
                 </optgroup>
                 <optgroup label='Football'>
-                    <option id='down' value='api/scoredata/Down'>Down</option>
-                    <option id='distance' value='api/scoredata/ToGo'>Distance</option>
-                    <option id='timeout' value='api/scoredata/Timeout'>Timeout</option>
-                    <option id='possession' value='api/scoredata/ChangePoss'>Possession</option>
+                    <option value='api/score/Down'>Down</option>
+                    <option value='api/score/ToGo'>Distance</option>
+                    <option value='api/score/Timeout'>Timeout</option>
+                    <option value='api/score/ChangePoss'>Possession</option>
+                    <option value='api/score/Flag'>Flag</option>
                 </optgroup>
                 <optgroup label='Keypads'>
-                    <option id='clockkeys' value='1'>Set clock</option>
-                    <option id='homename' value='2'>Set home name</option>
-                    <option id='guestname' value='3'>Set guest name</option>
-                    <option id='contolpad-football' value='4'>Control Football</option>
+                    <option value='clockkeys'>Set clock</option>
+                    <option value='homename'>Set home name</option>
+                    <option value='guestname'>Set guest name</option>
+                    <option value='contolpad-football'>Control Football</option>
                 </optgroup>
             </select>
         </div>
         <div class="sdpi-item">
+            <div class="sdpi-item-label" id="keyparamsel-label">Key parameter</div>
+            <select class="sdpi-item-value select" id="keyparamsel"/>
+        </div>
+        <div class="sdpi-item">
             <div class="sdpi-item-label" id="keyparam-label">Key parameter</div>
-            <input class="sdpi-item-value" id="keyparam" type="text" value=""/>
+            <input class="sdpi-item-value" id="keyparam" type="number" value=""/>
         </div>
   `;
     }
@@ -150,7 +157,36 @@ $SD.on('connected', (jsn) => {
     settings = Utils.getProp(jsn, 'actionInfo.payload.settings', false);
     if (settings) {
         console.log('settings:', settings);
-        updateUI(settings);
+        if (action === 'com.evanscreekdev.virtualkey.action') {
+            // Add select field for key type and input for parameters
+            // Setup listener for virtual keys key selection
+            const keytypeselect = document.getElementById('keytype');
+            keytypeselect.value = settings.command;
+            updateKeyOptions();
+            keytypeselect.onchange = function() {
+                settings.command = keytypeselect.value;
+                $SD.api.setSettings($SD.uuid, settings);
+                updateKeyOptions();
+            };
+            // Setup listener for keyparamsel select field
+            const paramselect = document.getElementById('keyparamsel');
+            paramselect.onchange = function() {
+                console.log("Virtual key params selected:", paramselect.value);
+                settings.param = paramselect.value;
+                $SD.api.setSettings($SD.uuid, settings);
+            };
+            // Setup listener for keyparam text field
+            const param = document.getElementById('keyparam');
+            param.onchange = function() {
+                console.log("Virtual key param value:", param.value);
+                settings.param = param.value;
+                $SD.api.setSettings($SD.uuid, settings);
+            };
+            // var element = document.getElementById('keytype');
+            // element.value = settings.command;
+        } else {
+            updateUI(settings);
+        }
     }
 });
 
@@ -174,8 +210,10 @@ $SD.on('connected', (jsn) => {
         updateUI(globalSettings);
         if (globalSettings.hasOwnProperty('baseurl')) {
             // Call REST API to get players
-            let url = `${globalSettings.baseurl}rest/db/players`;
-            fetch (url) 
+            let url;
+            if (action === 'com.evanscreekdev.showplayer.action') {
+                url = `${globalSettings.baseurl}rest/db/players`;
+                fetch (url) 
                 .then(function (response) {
                     return response.json();
                 })
@@ -209,7 +247,7 @@ $SD.on('connected', (jsn) => {
                             const player = data[i];
                             const option = document.createElement('option');
                             option.value = player.id;
-                            option.key = player.id;
+                            // option.key = player.id;
                             option.text = player.jersey + " - " + player.name;
                             optgroup.appendChild(option);
                         }
@@ -224,9 +262,10 @@ $SD.on('connected', (jsn) => {
                 .catch(function (err) {
                     console.log('error: ' + err);
                 });
-            // Now Call REST API to get sponsors
-            url = `${globalSettings.baseurl}rest/db/sponsors`;
-            fetch (url) 
+            } else if (action === 'com.evanscreekdev.showsponsor.action') {
+                // Now Call REST API to get sponsors
+                url = `${globalSettings.baseurl}rest/db/sponsors`;
+                fetch (url) 
                 .then(function (response) {
                     return response.json();
                 })
@@ -251,7 +290,7 @@ $SD.on('connected', (jsn) => {
                             const sponsor = data[i];
                             const option = document.createElement('option');
                             option.value = sponsor.id;
-                            option.key = sponsor.id;
+                            // option.key = sponsor.id;
                             option.text = sponsor.name;
                             select.appendChild(option);
                         }
@@ -263,9 +302,12 @@ $SD.on('connected', (jsn) => {
                 .catch(function (err) {
                     console.log('error: ' + err);
                 });
+            }
         };
     }
 });
+
+
 
 /**
  * The 'sendToPropertyInspector' event can be used to send messages directly from your plugin
@@ -294,6 +336,70 @@ $SD.on('sendToPropertyInspector', jsn => {
          */
     }
 });
+
+const updateKeyOptions = () => {
+    const keytypeselect = document.getElementById('keytype');
+    const keyparamselect = document.getElementById('keyparamsel');
+    console.log("Virtual key selected:", keytypeselect.value);
+    // settings.command = keytypeselect.value;
+    // $SD.api.setSettings($SD.uuid, settings);
+    // Hide keyparamsel and keyparam fields
+    keyparamselect.style.display = 'none';
+    document.getElementById('keyparam').style.display = 'none';
+    // Remove all options from 'keyparamsel' select field
+    while (keyparamselect.firstChild) {
+        keyparamselect.removeChild(keyparamselect.firstChild);
+    }
+    // Add options to 'keyparamsel' select field based on selected virtual key
+    if (keytypeselect.value === 'api/score/Quarter' || keytypeselect.value === 'api/score/HomeTOL' || 
+            keytypeselect.value === 'api/score/GuestTOL' || keytypeselect.value === 'api/score/Down') {
+        console.log("selected item was period, tol, or down");
+        document.getElementById('keyparamsel').style.display = 'inline';
+        // Add 'up', 'down', and 'reset' options to 'keyparamsel' select field
+        var option = document.createElement('option');
+        option.value = 'up';
+        option.text = 'Up';
+        keyparamselect.appendChild(option);
+        option = document.createElement('option');
+        option.value = 'down';
+        option.text = 'Down';
+        keyparamselect.appendChild(option);
+        option = document.createElement('option');
+        option.value = 'reset';
+        option.text = 'Reset';
+        keyparamselect.appendChild(option);
+        if (settings.hasOwnProperty('param')) {
+            keyparamselect.value = settings.param;
+        }
+    } else if (keytypeselect.value === 'api/score/Timeout' || keytypeselect.value === 'api/score/ChangePoss') {
+        console.log("selected item was timeout or possession");
+        document.getElementById('keyparamsel').style.display = 'flex';
+        // Add 'home', 'guest', and 'clear' options to 'keyparamsel' select field
+        var option = document.createElement('option');
+        option.value = 'Home';
+        option.text = 'Home';
+        keyparamselect.appendChild(option);
+        option = document.createElement('option');
+        option.value = 'Guest';
+        option.text = 'Guest';
+        keyparamselect.appendChild(option);
+        option = document.createElement('option');
+        option.value = 'Clear';
+        option.text = 'Clear';
+        keyparamselect.appendChild(option);
+        if (settings.hasOwnProperty('param')) {
+            keyparamselect.value = settings.param;
+        }
+    } else if (keytypeselect.value === 'api/score/HomeScore' || keytypeselect.value === 'api/score/GuestScore' ||
+                keytypeselect.value === 'api/score/ToGo' || keytypeselect.value === 'api/clock/Setup' ||
+                keytypeselect.value === 'api/clock/Reset' || keytypeselect.value === 'api/clock/Adjust') {
+        console.log("Selected item was score, togo, setup, reset, or adjust");
+        document.getElementById('keyparam').style.display = 'flex';
+        if (settings.hasOwnProperty('param')) {
+            document.getElementById('keyparam').value = settings.param;
+        }
+    }
+};
 
 const updateUI = (pl) => {
     Object.keys(pl).map(e => {
@@ -401,6 +507,7 @@ $SD.on('piDataChanged', (returnValue) => {
         if (globalSettings.adTimeout !== adto) {
             sendValueToPlugin(adto, 'adTimeout');
         }
+    // TODO: Add playerimage path and sponsorimage path
     } else {
         console.log("Data changed: ", returnValue);
         /* SAVE THE VALUE TO SETTINGS */
