@@ -211,7 +211,15 @@ $SD.on('connected', (jsn) => {
         if (globalSettings.hasOwnProperty('baseurl')) {
             // Call REST API to get players
             let url;
-            if (action === 'com.evanscreekdev.showplayer.action') {
+            if (action === 'com.evanscreekdev.clock.action') {
+                if (!settings || !settings.hasOwnProperty('url')) {
+                    if (!settings) {
+                        settings = {};
+                    }
+                    settings.url = globalSettings.baseurl + 'events';
+                    $SD.api.setSettings($SD.uuid, settings);
+                }
+            } else if (action === 'com.evanscreekdev.showplayer.action') {
                 url = `${globalSettings.baseurl}rest/db/players`;
                 fetch (url) 
                 .then(function (response) {
@@ -357,15 +365,15 @@ const updateKeyOptions = () => {
         document.getElementById('keyparamsel').style.display = 'inline';
         // Add 'up', 'down', and 'reset' options to 'keyparamsel' select field
         var option = document.createElement('option');
-        option.value = 'up';
+        option.value = 'Up';
         option.text = 'Up';
         keyparamselect.appendChild(option);
         option = document.createElement('option');
-        option.value = 'down';
+        option.value = 'Down';
         option.text = 'Down';
         keyparamselect.appendChild(option);
         option = document.createElement('option');
-        option.value = 'reset';
+        option.value = 'Reset';
         option.text = 'Reset';
         keyparamselect.appendChild(option);
         if (settings.hasOwnProperty('param')) {
