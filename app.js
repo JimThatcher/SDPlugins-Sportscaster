@@ -61,6 +61,8 @@ function connected(jsn) {
         console.log('%c%s', 'color: white; background: black; font-size: 13px;', '[app.js]propertyInspectorDidAppear:');
     });
 
+    $SD.on('com.evanscreekdev.clock.action.willDisappear', (jsonObj) => clockKeyAction.onClockWillDisappear(jsonObj));
+    $SD.on('com.evanscreekdev.clock.action.willAppear', (jsonObj) => clockKeyAction.onClockWillAppear(jsonObj));
     $SD.on('com.evanscreekdev.clock.action.keyDown', (jsonObj) => clockKeyAction.onClockKeyDown(jsonObj));
     $SD.on('com.evanscreekdev.clock.action.keyUp', (jsonObj) => clockKeyAction.onClockKeyUp(jsonObj));
     $SD.on('com.evanscreekdev.clock.action.sendToPlugin', (jsonObj) => clockKeyAction.onClockSendToPlugin(jsonObj));
@@ -168,8 +170,33 @@ function drawImage(inContext, imageUrl) {
         drawCircle(ctx, 35, 35, 15);
         dataURL = canvas.toDataURL();
         $SD.api.setImage(inContext, dataURL, DestinationEnum.HARDWARE_AND_SOFTWARE, StateEnum.ENABLED);
-        $SD.api.showOk(inContext);
+        // $SD.api.showOk(inContext);
     }
+}
+
+function drawClock(inContext, inClock) {
+    console.log("drawClock:", inClock);
+    let canvas = document.createElement('canvas');
+    let ctx = canvas.getContext('2d');
+    canvas.width = 144;
+    canvas.height = 144;
+    ctx.font = '48px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'red' ;
+    ctx.fillRect(0, 0, 144, 144);
+    // Now draw the time to the canvas
+    ctx.fillStyle = 'white';
+    ctx.fillText(inClock, 72, 72);
+    let dataURL = canvas.toDataURL();
+    $SD.api.setImage(inContext, dataURL, DestinationEnum.HARDWARE_AND_SOFTWARE, StateEnum.ENABLED);
+    ctx.fillStyle = 'green' ;
+    ctx.fillRect(0, 0, 144, 144);
+    // Now draw the time to the canvas
+    ctx.fillStyle = 'white';
+    ctx.fillText(inClock, 72, 72);
+    dataURL = canvas.toDataURL();
+    $SD.api.setImage(inContext, dataURL, DestinationEnum.HARDWARE_AND_SOFTWARE, StateEnum.DISABLED);
 }
 
 // ACTIONS
@@ -519,6 +546,81 @@ const virtualKeyAction = {
 };
 
 const clockKeyAction = {
+    eventSource: null,
+
+    onClockWillDisappear: function (jsn) {
+        // If we have a baseURL, let's paint the clock using server-side events
+        console.log("onWillDisappear", jsn);
+        if (this.eventSource) {
+            console.log("Closing clockKeyAction eventSource");
+            // this.eventSource.removeEventListener('clock', this.onClockEventMessage);
+            this.eventSource.close();
+        }
+    },
+
+    onClockEventMessage: function (e) {
+        console.log("clock update", e.data);
+        var clockJson = JSON.parse(e.data);
+        if (clockJson["Clock"]) {
+            var periodLoc = clockJson["Clock"].lastIndexOf(".");
+            var resultStr = "";
+            if (periodLoc > 1) {
+                resultStr = clockJson["Clock"].substring(0, periodLoc).trim();
+            }
+            else {
+                resultStr = clockJson["Clock"].trim();
+            }
+            drawClock(context, resultStr);
+        }
+    },
+
+    onClockWillAppear: function (jsn) {
+        // If we have a baseURL, let's paint the clock using server-side events
+        console.log("onWillAppear", jsn);
+        const context = Utils.getProp(jsn, 'context', '');
+        let state = Utils.getProp(jsn, 'payload.state', 0);
+        let desiredState = Utils.getProp(jsn, 'payload.userDesiredState', 0);
+        let multiAction = Utils.getProp(jsn, 'payload.isInMultiAction', false);
+        let settings = Utils.getProp(jsn, 'payload.settings', {});
+        if (multiAction) {
+            state = (desiredState == 0) ? 1 : 0;
+        }
+        if (!settings.hasOwnProperty('url') && globalSettings.hasOwnProperty('baseurl')) {
+            settings.url = globalSettings.baseurl + 'events';
+        }
+        if (settings.hasOwnProperty('url') && settings.url.length > 12) {
+            if (!!window.EventSource && this.eventSource === null) {
+                eventSource = new EventSource(settings.url);
+                eventSource.addEventListener('open', function(e) {
+                    console.log("Events Connected");
+                }, false);
+    
+                eventSource.addEventListener('error', function(e) {
+                    if (e.target.readyState != EventSource.OPEN) {
+                        console.log("Events Disconnected");
+                    }
+                }, false);
+    
+                eventSource.addEventListener('clock', function(e) {
+                    console.log("clock update", e.data);
+                    var clockJson = JSON.parse(e.data);
+                    if (clockJson["Clock"]) {
+                        var periodLoc = clockJson["Clock"].lastIndexOf(".");
+                        var resultStr = "";
+                        if (periodLoc > 1) {
+                            resultStr = clockJson["Clock"].substring(0, periodLoc).trim();
+                        }
+                        else {
+                            resultStr = clockJson["Clock"].trim();
+                        }
+                        drawClock(context, resultStr);
+                    }
+                }, false);
+            } else {
+                console.log("EventSource already exists");
+            }
+        }
+    },
 
     onClockKeyDown: function (jsn) {
         // We are only interested in the clock key down event to track double-clicks
