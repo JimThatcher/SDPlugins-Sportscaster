@@ -198,17 +198,54 @@ $SD.on('connected', (jsn) => {
 
  $SD.on('didReceiveGlobalSettings', jsn => {
     globalSettings = Utils.getProp(jsn, 'payload.settings', false);
-    if (globalSettings) {
-        console.log('globalSettings:', globalSettings);
-        if (globalSettings.hasOwnProperty('baseurl')) {
-            if (globalSettings.baseurl.length > 12) {
+    processGlobalSettings(globalSettings);
+});
+
+
+
+/**
+ * The 'sendToPropertyInspector' event can be used to send messages directly from your plugin
+ * to the Property Inspector without saving these messages to the settings.
+ */
+
+$SD.on('sendToPropertyInspector', jsn => {
+    const pl = jsn.payload;
+    /**
+     *  This is an example, how you could show an error to the user
+     */
+     if (pl.hasOwnProperty('error')) {
+        sdpiWrapper.innerHTML = `<div class="sdpi-item">
+            <details class="message caution">
+            <summary class="${pl.hasOwnProperty('info') ? 'pointer' : ''}">${pl.error}</summary>
+                ${pl.hasOwnProperty('info') ? pl.info : ''}
+            </details>
+        </div>`;
+    } else {
+        if (pl.hasOwnProperty('baseurl')) {
+            processGlobalSettings(pl);
+        }
+
+        /**
+         *
+         * Do something with the data sent from the plugin
+         * e.g. update some elements in the Property Inspector's UI.
+         *
+         */
+    }
+});
+
+const processGlobalSettings = (receivedSettings) => {
+    if (receivedSettings) {
+        console.log('receivedSettings:', receivedSettings);
+        if (receivedSettings.hasOwnProperty('baseurl')) {
+            if (receivedSettings.baseurl.length > 12) {
                 console.log("Collapse global settings fields.");
                 var divGS = document.getElementById('globalSettings');
                 divGS.removeAttribute('open');
             }
         }
-        updateUI(globalSettings);
-        if (globalSettings.hasOwnProperty('baseurl')) {
+        updateUI(receivedSettings);
+        if (receivedSettings.hasOwnProperty('baseurl')) {
             // Call REST API to get players
             let url;
             if (action === 'com.evanscreekdev.clock.action') {
@@ -216,11 +253,11 @@ $SD.on('connected', (jsn) => {
                     if (!settings) {
                         settings = {};
                     }
-                    settings.url = globalSettings.baseurl + 'events';
+                    settings.url = receivedSettings.baseurl + 'events';
                     $SD.api.setSettings($SD.uuid, settings);
                 }
             } else if (action === 'com.evanscreekdev.showplayer.action') {
-                url = `${globalSettings.baseurl}rest/db/players`;
+                url = `${receivedSettings.baseurl}rest/db/players`;
                 fetch (url) 
                 .then(function (response) {
                     return response.json();
@@ -272,7 +309,7 @@ $SD.on('connected', (jsn) => {
                 });
             } else if (action === 'com.evanscreekdev.showsponsor.action') {
                 // Now Call REST API to get sponsors
-                url = `${globalSettings.baseurl}rest/db/sponsors`;
+                url = `${receivedSettings.baseurl}rest/db/sponsors`;
                 fetch (url) 
                 .then(function (response) {
                     return response.json();
@@ -313,37 +350,7 @@ $SD.on('connected', (jsn) => {
             }
         };
     }
-});
-
-
-
-/**
- * The 'sendToPropertyInspector' event can be used to send messages directly from your plugin
- * to the Property Inspector without saving these messages to the settings.
- */
-
-$SD.on('sendToPropertyInspector', jsn => {
-    const pl = jsn.payload;
-    /**
-     *  This is an example, how you could show an error to the user
-     */
-     if (pl.hasOwnProperty('error')) {
-        sdpiWrapper.innerHTML = `<div class="sdpi-item">
-            <details class="message caution">
-            <summary class="${pl.hasOwnProperty('info') ? 'pointer' : ''}">${pl.error}</summary>
-                ${pl.hasOwnProperty('info') ? pl.info : ''}
-            </details>
-        </div>`;
-    } else {
-
-        /**
-         *
-         * Do something with the data sent from the plugin
-         * e.g. update some elements in the Property Inspector's UI.
-         *
-         */
-    }
-});
+}
 
 const updateKeyOptions = () => {
     const keytypeselect = document.getElementById('keytype');
