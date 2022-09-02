@@ -6,11 +6,15 @@
       "States": [
         {
           "Image": "action/images/hilightshow",
-          "Name": "Show"
+          "Name": "Show",
+          "FontSize": "18",
+          "TitleAlignment": "bottom"
         },
         {
           "Image": "action/images/hilighthide",
-          "Name": "Hide"
+          "Name": "Hide",
+          "FontSize": "18",
+          "TitleAlignment": "bottom"
         }
       ], 
       "Tooltip": "Player Highlight", 
@@ -92,6 +96,16 @@
       "UUID": "com.evanscreekdev.virtualkey.action"
     }
   ], 
+  "Profiles": [
+    {
+      "Name": "profiles/Football Controller-15Key",
+      "DeviceType": 0
+    },
+    {
+      "Name": "profiles/Football Controller-32Key",
+      "DeviceType": 2
+    }
+  ],
   "SDKVersion": 2,
   "Author": "Evans Creek Dev", 
   "CodePath": "index.html", 
@@ -100,7 +114,7 @@
   "Name": "Sports Stream manager", 
   "Icon": "images/sportsicon",
   "Category": "Sports Stream Manager",
-  "CategoryIcon": "images/plugin",
+  "CategoryIcon": "images/scorebd",
   "URL": "https://github.com/JimThatcher/SDPlugins", 
   "Version": "1.0.1",
   "OS": [

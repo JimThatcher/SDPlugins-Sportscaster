@@ -32,10 +32,8 @@ const setDebugOutput = debug => (debug === true ? console.log.bind(window.consol
 debugLog = setDebugOutput(debug);
 
 // Create a wrapper to allow passing JSON to the socket
-WebSocket.prototype.sendJSON = function (jsn, log) {
-    if (jsn.length < 4096) {
-        console.log('SendJSON', this, JSON.stringify(jsn));
-    }
+WebSocket.prototype.sendJSON = function (jsn) {
+    // console.log('SendJSON', jsn);
     // if (this.readyState) {
     this.send(JSON.stringify(jsn));
     // }
@@ -1062,7 +1060,6 @@ const SDApi = {
          * all keys of the original JSON objects.
          */
         const pl = Object.assign({}, { event: fn, context: context }, payload);
-
         /** Check, if we have a connection, and if, send the JSON payload */
         if (debug) {
             console.log('-----SDApi.send-----');
@@ -1209,7 +1206,7 @@ const SDApi = {
                     const payload = {
                         profile: inProfileName
                     };
-                    const pl = Object.assign({}, {event, context, device}, payload);
+                    const pl = Object.assign({}, {event, context, device, payload});
                     $SD.connection && $SD.connection.sendJSON(pl);
                 }
             }

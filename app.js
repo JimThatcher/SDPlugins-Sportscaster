@@ -1,16 +1,5 @@
 /* global $CC, Utils, $SD */
-
-/**
- * Here are a couple of wrappers we created to help you quickly setup
- * your plugin and subscribe to events sent by Stream Deck to your plugin.
- */
-
-/**
- * The 'connected' event is sent to your plugin, after the plugin's instance
- * is registered with Stream Deck software. It carries the current websocket
- * and other information about the current environmet in a JSON object
- * You can use it to subscribe to events you want to use in your plugin.
- */
+// connected event, called when the StreamDeck loads the plugin and the plugin is registered
 
 $SD.on('connected', (jsonObj) => connected(jsonObj));
 var pluginUUID;
@@ -90,7 +79,7 @@ function onAdEvent(evt) {
         if (eventJson.hasOwnProperty('requester')) {
             context = eventJson["requester"];
         } else {
-            // Iterate through the active keys (in keysCache) and update the status of each key
+            // Iterate through the active keys (in keysCache) looking for a key
             // that matches the ad's sponsor id
             if (activeAd !== 0) {
                 for (var key in keysCache) {
@@ -120,7 +109,7 @@ function onHilightEvent(evt) {
         if (eventJson.hasOwnProperty('requester')) {
             context = eventJson["requester"];
         } else {
-            // Iterate through the active keys (in keysCache) and update the status of each key
+            // Iterate through the active keys (in keysCache) looking for a key
             // that matches the hilight's player id
             if (activeHilight !== 0) {
                 for (var key in keysCache) {
@@ -139,21 +128,36 @@ function onHilightEvent(evt) {
     }
 }
 
+function onOpenEvent(evt) {
+    console.log("Events Connected");
+}
+
+function onErrorEvent(e) {
+    if (e.target.readyState != EventSource.OPEN) {
+        console.log("Events Disconnected");
+        disconnectServerEvents();
+    }
+}
+
+function disconnectServerEvents() {
+    console.log("Disconnecting server events");
+    eventSource.removeEventListener('open', onOpenEvent, false);
+    eventSource.removeEventListener('error', onErrorEvent, false);
+    eventSource.removeEventListener('clock', onClockEvent, false);
+    eventSource.removeEventListener('score', onScoreEvent, false);
+    eventSource.removeEventListener('ad', onAdEvent, false);
+    eventSource.removeEventListener('hilight', onHilightEvent, false);
+    delete eventSource;
+    eventSource = null;
+}
+
 // If globalSettings.baseurl is set, let's try to set up server-sent events listener
 function connectServerEvents() {
-    console.log('connectServerEvents');
     if (eventSource === null) {
-        console.log('connectServerEvents: eventSource is null');
+        console.log('connectServerEvents: connecting server events');
         eventSource = new EventSource(globalSettings.baseurl + "events");
-        eventSource.addEventListener('open', function(e) {
-            console.log("Events Connected");
-        }, false);
-
-        eventSource.addEventListener('error', function(e) {
-            if (e.target.readyState != EventSource.OPEN) {
-                console.log("Events Disconnected");
-            }
-        }, false);
+        eventSource.addEventListener('open', onOpenEvent, false);
+        eventSource.addEventListener('error', onErrorEvent, false);
         eventSource.addEventListener('clock', onClockEvent, false);
         eventSource.addEventListener('score', onScoreEvent, false);
         eventSource.addEventListener('ad', onAdEvent, false);
@@ -165,96 +169,85 @@ function connected(jsn) {
     console.log('connected', jsn);
     pluginUUID = jsn.uuid;
     $SD.api.getGlobalSettings(pluginUUID);
-    $SD.on('didReceiveGlobalSettings', (jsonObj) => onDidReceiveGlobalSettings(jsonObj));
+    $SD.on('didReceiveGlobalSettings', (jsonObj) => onDidReceiveGlobalSettings(jsonObj.payload.settings));
     $SD.on('com.evanscreekdev.showplayer.action.willAppear', (jsonObj) => hilightAction.onHilightWillAppear(jsonObj));
     $SD.on('com.evanscreekdev.showplayer.action.keyUp', (jsonObj) => hilightAction.onHilightKeyUp(jsonObj));
-    $SD.on('com.evanscreekdev.showplayer.action.sendToPlugin', (jsonObj) => hilightAction.onHilightSendToPlugin(jsonObj));
+    $SD.on('com.evanscreekdev.showplayer.action.sendToPlugin', (jsonObj) => onSendToPlugin(jsonObj));
     $SD.on('com.evanscreekdev.showplayer.action.didReceiveSettings', (jsonObj) => hilightAction.onHilightDidReceiveSettings(jsonObj));
-    $SD.on('com.evanscreekdev.showplayer.action.propertyInspectorDidAppear', (jsonObj) => {
-        var context = jsonObj.context;
-        if (globalSettings.hasOwnProperty('baseurl')) {
-            connectServerEvents();
-        }
-        $SD.api.sendToPropertyInspector(context, globalSettings, "com.evanscreekdev.showplayer.action");
-        console.log('%c%s', 'color: white; background: black; font-size: 13px;', '[app.js]propertyInspectorDidAppear:');
-    });
-    $SD.on('com.evanscreekdev.showplayer.action.propertyInspectorDidDisappear', (jsonObj) => {
-        console.log('%c%s', 'color: white; background: red; font-size: 13px;', '[app.js]propertyInspectorDidDisappear:');
-    });
+    $SD.on('com.evanscreekdev.showplayer.action.propertyInspectorDidAppear', (jsonObj) => onPropertyInspectorDidAppear(jsonObj));
 
     $SD.on('com.evanscreekdev.showsponsor.action.willAppear', (jsonObj) => adAction.onAdWillAppear(jsonObj));
     $SD.on('com.evanscreekdev.showsponsor.action.keyUp', (jsonObj) => adAction.onAdKeyUp(jsonObj));
-    $SD.on('com.evanscreekdev.showsponsor.action.sendToPlugin', (jsonObj) => adAction.onAdSendToPlugin(jsonObj));
+    $SD.on('com.evanscreekdev.showsponsor.action.sendToPlugin', (jsonObj) => onSendToPlugin(jsonObj));
     $SD.on('com.evanscreekdev.showsponsor.action.didReceiveSettings', (jsonObj) => adAction.onAdDidReceiveSettings(jsonObj));
-    $SD.on('com.evanscreekdev.showsponsor.action.propertyInspectorDidAppear', (jsonObj) => {
-        var context = jsonObj.context;
-        if (globalSettings.hasOwnProperty('baseurl')) {
-            connectServerEvents();
-        }
-        $SD.api.sendToPropertyInspector(context, globalSettings, "com.evanscreekdev.showsponsor.action");
-        console.log('%c%s', 'color: white; background: black; font-size: 13px;', '[app.js]propertyInspectorDidAppear:');
-    });
+    $SD.on('com.evanscreekdev.showsponsor.action.propertyInspectorDidAppear', (jsonObj) => onPropertyInspectorDidAppear(jsonObj));
 
     $SD.on('com.evanscreekdev.scoreboard.show.action.willDisappear', (jsonObj) => scoreboardAction.onScoreboardWillDisappear(jsonObj));
     $SD.on('com.evanscreekdev.scoreboard.show.action.willAppear', (jsonObj) => scoreboardAction.onScoreboardWillAppear(jsonObj));
     $SD.on('com.evanscreekdev.scoreboard.show.action.keyUp', (jsonObj) => scoreboardAction.onScoreboardKeyUp(jsonObj));
-    $SD.on('com.evanscreekdev.scoreboard.show.action.sendToPlugin', (jsonObj) => scoreboardAction.onScoreboardSendToPlugin(jsonObj));
-    $SD.on('com.evanscreekdev.scoreboard.show.action.propertyInspectorDidAppear', (jsonObj) => {
-        var context = jsonObj.context;
-        if (globalSettings.hasOwnProperty('baseurl')) {
-            connectServerEvents();
-        }
-        $SD.api.sendToPropertyInspector(context, globalSettings, "com.evanscreekdev.scoreboard.show.action");
-        console.log('%c%s', 'color: white; background: black; font-size: 13px;', '[app.js]propertyInspectorDidAppear:');
-    });
+    $SD.on('com.evanscreekdev.scoreboard.show.action.sendToPlugin', (jsonObj) => onSendToPlugin(jsonObj));
+    $SD.on('com.evanscreekdev.scoreboard.show.action.propertyInspectorDidAppear', (jsonObj) => onPropertyInspectorDidAppear(jsonObj));
+    $SD.on('com.evanscreekdev.scoreboard.show.action.propertyInspectorDidDisappear', (jsonObj) => scoreboardAction.onScoreboardPIDidDisappear(jsonObj));
+
+    $SD.on('com.evanscreekdev.scoreboard.connect.action.keyUp', (jsonObj) => connectConsoleAction.onConnectKeyUp(jsonObj));
+    $SD.on('com.evanscreekdev.scoreboard.connect.action.sendToPlugin', (jsonObj) => onSendToPlugin(jsonObj));
+    $SD.on('com.evanscreekdev.scoreboard.connect.action.propertyInspectorDidAppear', (jsonObj) => onPropertyInspectorDidAppear(jsonObj));
 
     $SD.on('com.evanscreekdev.virtualkey.action.keyUp', (jsonObj) => virtualKeyAction.onVkeyKeyUp(jsonObj));
-    $SD.on('com.evanscreekdev.virtualkey.action.sendToPlugin', (jsonObj) => virtualKeyAction.onVkeySendToPlugin(jsonObj));
-    $SD.on('com.evanscreekdev.virtualkey.action.propertyInspectorDidAppear', (jsonObj) => {
-        var context = jsonObj.context;
-        if (globalSettings.hasOwnProperty('baseurl')) {
-            connectServerEvents();
-        }
-        $SD.api.sendToPropertyInspector(context, globalSettings, "com.evanscreekdev.virtualkey.action");
-        console.log('%c%s', 'color: white; background: black; font-size: 13px;', '[app.js]propertyInspectorDidAppear:');
-    });
+    $SD.on('com.evanscreekdev.virtualkey.action.sendToPlugin', (jsonObj) => onSendToPlugin(jsonObj));
+    $SD.on('com.evanscreekdev.virtualkey.action.propertyInspectorDidAppear', (jsonObj) => onPropertyInspectorDidAppear(jsonObj));
 
     $SD.on('com.evanscreekdev.clock.action.willDisappear', (jsonObj) => clockKeyAction.onClockWillDisappear(jsonObj));
     $SD.on('com.evanscreekdev.clock.action.willAppear', (jsonObj) => clockKeyAction.onClockWillAppear(jsonObj));
     $SD.on('com.evanscreekdev.clock.action.keyDown', (jsonObj) => clockKeyAction.onClockKeyDown(jsonObj));
     $SD.on('com.evanscreekdev.clock.action.keyUp', (jsonObj) => clockKeyAction.onClockKeyUp(jsonObj));
-    $SD.on('com.evanscreekdev.clock.action.sendToPlugin', (jsonObj) => clockKeyAction.onClockSendToPlugin(jsonObj));
-    $SD.on('com.evanscreekdev.clock.action.propertyInspectorDidAppear', (jsonObj) => {
-        var context = jsonObj.context;
-        if (globalSettings.hasOwnProperty('baseurl')) {
-            connectServerEvents();
-        }
-        $SD.api.sendToPropertyInspector(context, globalSettings, "com.evanscreekdev.clock.action");
-        console.log('%c%s', 'color: white; background: black; font-size: 13px;', '[app.js]propertyInspectorDidAppear:');
-    });
+    $SD.on('com.evanscreekdev.clock.action.sendToPlugin', (jsonObj) => onSendToPlugin(jsonObj));
+    $SD.on('com.evanscreekdev.clock.action.propertyInspectorDidAppear', (jsonObj) => onPropertyInspectorDidAppear(jsonObj));
+    $SD.on('com.evanscreekdev.clock.action.propertyInspectorDidDisappear', (jsonObj) => clockKeyAction.onClockPIDidDisappear(jsonObj));
 };
+
+function onSendToPlugin(jsonObj) {
+    // This is a message sent directly from the Property Inspector 
+    const payload = Utils.getProp(jsonObj, 'payload', {});
+    updateGlobalSettings(payload);
+}
+
+function onPropertyInspectorDidAppear(jsonObj) {
+    var context = jsonObj.context;
+    var action = jsonObj.action;
+    connectServerEvents();
+    $SD.api.sendToPropertyInspector(context, globalSettings, action);
+    console.log('%c%s', 'color: white; background: black; font-size: 13px;', '[app.js]propertyInspectorDidAppear: ' + action);
+}
 
 function onDidReceiveGlobalSettings(jsonObj) {
     console.log('%c%s', 'color: white; background: black; font-size: 13px;', '[app.js]onDidReceiveGlobalSettings:' + JSON.stringify(jsonObj));
-    globalSettings = Utils.getProp(jsonObj, 'payload.settings', {});
-    if (globalSettings.hasOwnProperty('baseurl')) {
+    if (globalSettings.hasOwnProperty('baseurl') && jsonObj.hasOwnProperty('baseurl') && globalSettings.baseurl !== jsonObj.baseurl) {
+        console.log('%c%s', 'color: white; background: black; font-size: 13px;', '[app.js]onDidReceiveGlobalSettings: baseurl changed');
+        if (eventSource != null) {
+            disconnectServerEvents();
+        }
+    }
+    if (globalSettings.hasOwnProperty('baseurl') || jsonObj.hasOwnProperty('baseurl')) {
         connectServerEvents();
     }
+    globalSettings = Object.assign({}, globalSettings, jsonObj);
     if (!globalSettings.hasOwnProperty('playerImagePath')) {
-        globalSettings.playerImagePath = 'players/images/';
+        globalSettings = {...globalSettings, playerImagePath: 'overlay/images/'};
     }
     if (!globalSettings.hasOwnProperty('sponsorImagePath')) {
-        globalSettings.sponsorImagePath = 'sponsors/images/';
+        globalSettings = {...globalSettings, sponsorImagePath: 'overlay/images/'};
     }
     if (!globalSettings.hasOwnProperty('hilightTimeout')) {
-        globalSettings.hilightTimeout = 5000;
+        globalSettings = {...globalSettings, hilightTimeout: '5000'};
     }
     if (!globalSettings.hasOwnProperty('adTimeout')) {
-        globalSettings.adTimeout = 10000;
+        globalSettings = {...globalSettings, adTimeout: '10000'};
     }
     // TODO: Read current state of each overlay from server and set the global variables accordingly
-    console.log("globalSettings: " + JSON.stringify(globalSettings));
-    $SD.api.setGlobalSettings(pluginUUID, globalSettings);
+    console.log("globalSettings: " + JSON.stringify(globalSettings), globalSettings);
+    var copySettings = {...globalSettings};
+    $SD.api.setGlobalSettings(pluginUUID, copySettings);
 };
 
 // Called from each action's sendToPlugin to handle updates to the global settings
@@ -262,10 +255,15 @@ function updateGlobalSettings(payload) {
     console.log("Payload with global settings:", payload);
     if (payload.hasOwnProperty('baseurl')) {
         console.log("Received baseURL from Property Inspector:", payload.baseurl);
-        globalSettings = {...globalSettings, baseurl: payload.baseurl};
-        // globalSettings.baseurl = payload.baseurl;
-        console.log("setGlobalSettings:", globalSettings);
-        $SD.api.setGlobalSettings(pluginUUID, globalSettings);
+        if (globalSettings.baseurl !== payload.baseurl) {
+            if (eventSource != null) {
+                disconnectServerEvents();
+            }
+            globalSettings = {...globalSettings, baseurl: payload.baseurl};
+            console.log("setGlobalSettings:", globalSettings);
+            $SD.api.setGlobalSettings(pluginUUID, globalSettings);
+        }
+        connectServerEvents();
     } else if (payload.hasOwnProperty('hilightTimeout')) {
         console.log("Received highlightTimeout from Property Inspector:", payload.hilightTimeout);
         globalSettings.hilightTimeout = payload.hilightTimeout;
@@ -374,7 +372,9 @@ const adAction = {
 
         this.settings = Utils.getProp(jsn, 'payload.settings', {});
         console.log("settings: " + JSON.stringify(this.settings));
-        let newSettings = {...this.settings, url: globalSettings.baseurl + "rest/db/sponsor/" + this.settings.sponsorid};
+        let newSettings = {...this.settings, url: globalSettings.baseurl 
+            + "rest/db/sponsor/" + this.settings.sponsorid,
+            sponsorImagePath: globalSettings.sponsorImagePath};
         // Call REST API to retreive full sponsor details, then update the title
         // and image from data returned from REST API
         console.log("newSettings: " + JSON.stringify(newSettings));
@@ -387,7 +387,7 @@ const adAction = {
             $SD.api.setSettings(jsn.context, newSettings);
             $SD.api.setTitle(jsn.context, data.name);
             // Now load the image into a canvas scaled to 144x144, convert to base64 and send setImage
-            drawImage(jsn.context, globalSettings.baseurl + "sponsors/images/" + data.image);
+            drawImage(jsn.context, globalSettings.baseurl + globalSettings.sponsorImagePath + data.image);
         })
         .catch(function (error) {
             console.log("error: " + error);
@@ -402,8 +402,15 @@ const adAction = {
 
     onAdWillAppear: function (jsn) {
         this.settings = jsn.payload.settings;
-        console.log("onWillAppear", jsn);
+        console.log("onAdWillAppear", jsn);
         if (this.settings.url && this.settings.url.length > 20) {
+            if (globalSettings.hasOwnProperty('baseurl')) {
+                connectServerEvents();
+            } else {
+                globalSettings.baseurl = this.settings.url.substring(0, this.settings.url.indexOf("rest"));
+                $SD.api.setGlobalSettings(pluginUUID, globalSettings);
+                connectServerEvents();
+            }
             fetch(this.settings.url)
             .then(function (response) {
                 return response.json();
@@ -412,11 +419,15 @@ const adAction = {
                 $SD.api.setTitle(jsn.context, data.name);
                 var restLoc = jsn.payload.settings.url.indexOf("rest");
                 var baseUrl = jsn.payload.settings.url.substring(0, restLoc);
+                var imagePath = jsn.payload.settings.sponsorImagePath;
                 if (!globalSettings.hasOwnProperty('baseurl')) {
                     globalSettings.baseurl = baseUrl;
                 }
+                if (!globalSettings.hasOwnProperty('sponsorImagePath')){
+                    globalSettings.sponsorImagePath = imagePath;
+                }
                 // Now load the image into a canvas scaled to 144x144, convert to base64 and send setImage
-                drawImage(jsn.context, baseUrl + "sponsors/images/" + data.image);
+                drawImage(jsn.context, baseUrl + imagePath + data.image);
             })
             .catch(function (error) {
                 $SD.api.showAlert(jsn.context);
@@ -482,21 +493,7 @@ const adAction = {
                 console.log('error: ' + err);
             });
         }
-    },
-
-    onAdSendToPlugin: function (jsn) {
-        /**
-         * This is a message sent directly from the Property Inspector 
-         */ 
-
-        const sdpi_collection = Utils.getProp(jsn, 'payload.sdpi_collection', {});
-        const payload = Utils.getProp(jsn, 'payload', {});
-        if (sdpi_collection.value && sdpi_collection.value !== undefined) {
-            console.log('onSendToPlugin', { [sdpi_collection.key] : sdpi_collection.value });      
-        } else {
-            updateGlobalSettings(payload);
-        }
-    },
+    }
 };
 
 const hilightAction = {
@@ -506,9 +503,9 @@ const hilightAction = {
 
         this.settings = Utils.getProp(jsn, 'payload.settings', {});
         console.log("settings: " + JSON.stringify(this.settings));
-        // let newSettings = {};
-        // newSettings.playerid  = this.settings.playerid;
-        let newSettings = {...this.settings, url: globalSettings.baseurl + "rest/db/player/" + this.settings.playerid};
+        let newSettings = {...this.settings, url: globalSettings.baseurl 
+            + "rest/db/player/" + this.settings.playerid,
+            playerImagePath: globalSettings.playerImagePath};
         console.log("newSettings: " + JSON.stringify(newSettings));
         // Call REST API to retreive full player details, then update the title
         // and image from data returned from REST API
@@ -521,7 +518,7 @@ const hilightAction = {
             $SD.api.setSettings(jsn.context, newSettings);
             $SD.api.setTitle(jsn.context, data.jersey);
             // Now load the image into a canvas scaled to 144x144, convert to base64 and send setImage
-            drawImage(jsn.context, globalSettings.baseurl + "players/images/" + data.image);
+            drawImage(jsn.context, globalSettings.baseurl + globalSettings.playerImagePath + data.image);
         })
         .catch(function (error) {
             console.log("error: " + error);
@@ -536,8 +533,15 @@ const hilightAction = {
 
     onHilightWillAppear: function (jsn) {
         this.settings = jsn.payload.settings;
-        console.log("onWillAppear", jsn);
+        console.log("onHilightWillAppear", jsn);
         if (this.settings.url && this.settings.url.length > 20) {
+            if (globalSettings.hasOwnProperty('baseurl')) {
+                connectServerEvents();
+            } else {
+                globalSettings.baseurl = this.settings.url.substring(0, this.settings.url.indexOf("rest"));
+                $SD.api.setGlobalSettings(pluginUUID, globalSettings);
+                connectServerEvents();
+            }
             fetch(this.settings.url)
             .then(function (response) {
                 return response.json();
@@ -546,11 +550,15 @@ const hilightAction = {
                 $SD.api.setTitle(jsn.context, data.jersey);
                 var restLoc = jsn.payload.settings.url.indexOf("rest");
                 var baseUrl = jsn.payload.settings.url.substring(0, restLoc);
+                var imagePath = jsn.payload.settings.playerImagePath;
                 if (!globalSettings.hasOwnProperty('baseurl')) {
                     globalSettings.baseurl = baseUrl;
                 }
+                if (!globalSettings.hasOwnProperty('playerImagePath')){
+                    globalSettings.playerImagePath = imagePath;
+                }                
                 // Now load the image into a canvas scaled to 144x144, convert to base64 and send setImage
-                drawImage(jsn.context, baseUrl + "players/images/" + data.image);
+                drawImage(jsn.context, baseUrl + globalSettings.playerImagePath + data.image);
             })
             .catch(function (error) {
                 $SD.api.showAlert(jsn.context);
@@ -606,39 +614,39 @@ const hilightAction = {
                 console.log('error: ' + err);
             });
         }
-    },
-
-    onHilightSendToPlugin: function (jsn) {
-        /**
-         * This is a message sent directly from the Property Inspector 
-         */ 
-
-        const sdpi_collection = Utils.getProp(jsn, 'payload.sdpi_collection', {});
-        const payload = Utils.getProp(jsn, 'payload', {});
-        if (sdpi_collection.value && sdpi_collection.value !== undefined) {
-            console.log('onSendToPlugin', { [sdpi_collection.key] : sdpi_collection.value });      
-        } else {
-            updateGlobalSettings(payload);
-        }
-    },
+    }
 };
 
 const scoreboardAction = {
-
+    settings: {},
     onScoreboardWillDisappear: function (jsn) {
         // If we have a baseURL, let's paint the score using server-side events
         console.log("onScoreboardWillDisappear", jsn);
         let found = keysCache[jsn.context];
         if(found) {
             // remove the key from the cache
-            delete this.cache[jsn.context];
+            delete keysCache[jsn.context];
         }
     },
 
     onScoreboardWillAppear: function (jsn) {
         // If we have a baseURL, let's paint the key using server-side events
         console.log("onScoreboardWillAppear", jsn);
+        if (this.settings.url && this.settings.url.length > 12) {
+            if (globalSettings.hasOwnProperty('baseurl')) {
+                connectServerEvents();
+            } else {
+                globalSettings.baseurl = this.settings.url.substring(0, this.settings.url.indexOf("events"));
+                $SD.api.setGlobalSettings(pluginUUID, globalSettings);
+                connectServerEvents();
+            }
+        }
         const context = Utils.getProp(jsn, 'context', '');
+        let settings = Utils.getProp(jsn, 'payload.settings', {});
+        if (!settings.hasOwnProperty('url') && globalSettings.hasOwnProperty('baseurl') || 
+            (settings.hasOwnProperty('url') && globalSettings.hasOwnProperty('baseurl') && settings.url !== globalSettings.baseurl)) {
+            settings.url = globalSettings.baseurl + 'events';
+        }
         let state = Utils.getProp(jsn, 'payload.state', 0);
         const key = new KeyFace(jsn);
         // cache the current key
@@ -693,23 +701,56 @@ const scoreboardAction = {
         }
     },
 
-    onScoreboardSendToPlugin: function (jsn) {
-        /**
-         * This is a message sent directly from the Property Inspector 
-         */ 
+    onScoreboardPIDidDisappear: function (jsn) {
+        this.settings = Utils.getProp(jsn, 'payload.settings', {});
+        console.log("settings: " + JSON.stringify(this.settings));
+        this.settings.url = globalSettings.baseurl + "events";
+        $SD.api.setSettings(jsn.context, this.settings);
+    }
+};
 
-        const sdpi_collection = Utils.getProp(jsn, 'payload.sdpi_collection', {});
-        const payload = Utils.getProp(jsn, 'payload', {});
-        if (sdpi_collection.value && sdpi_collection.value !== undefined) {
-            console.log('onSendToPlugin', { [sdpi_collection.key] : sdpi_collection.value });      
-        } else {
-            updateGlobalSettings(payload);
+const connectConsoleAction = {
+    settings: {},
+    onConnectKeyUp: function (jsn) {
+        // Pull baseURL from globalSettings, 
+        // Build the URL for the GET REST request to baseURL/rest/console/[connect|disconnect]]
+        console.log("onConnectKeyUp", jsn);
+        const context = Utils.getProp(jsn, 'context', '');
+        const state = Utils.getProp(jsn, 'payload.state', 0);
+        let desiredState = Utils.getProp(jsn, 'payload.userDesiredState', 0);
+        let multiAction = Utils.getProp(jsn, 'payload.isInMultiAction', false);
+        if (multiAction) {
+            state = (desiredState == 0) ? 1 : 0;
         }
-    },
+        if (globalSettings.baseurl) {
+            let url = globalSettings.baseurl + 'rest/console/' + (state == 0 ? 'connect' : 'disconnect');
+            console.log("url: " + url);
+            fetch(url)
+            .then(function (response) {
+                if (!response.ok) {
+                    // Set state to 1 to indicate that the scoreboard is on
+                    console.log("GET console/connect response: " + response.status);
+                    $SD.api.showAlert(context);
+                } else {
+                    if (state == 0) {
+                        $SD.api.setState(context, 1);
+                    } else {
+                        $SD.api.setState(context, 0);
+                    }
+                    console.log("GET clock response: " + response.status);
+                }
+            })
+            .catch(function (err) {
+                console.log('error: ' + err);
+            });
+        } else {
+            console.log("No baseurl or settings", globalSettings, payload.settings);
+        }
+    }
 };
 
 const virtualKeyAction = {
-
+    settings: {},
     onVkeyKeyUp: function (jsn) {
         // Pull baseURL from globalSettings, 
         // Build the URL for the GET REST request to baseURL/{command}[/{param}]
@@ -719,8 +760,22 @@ const virtualKeyAction = {
         let params = Utils.getProp(jsn, 'payload.settings.param', 0);
         if (globalSettings.baseurl && command !== 0) {
             let url = globalSettings.baseurl + command + (params !== 0 ? '/' + params : '');
-            console.log("url: " + url);
-            fetch(url)
+            let options = { method: 'GET' };
+            if (command === 'rest/db/scoreboard') {
+                // Overloading the virtual key action to show/hide elements of scoreboard
+                // Value of 'params' determines which element to show or hide
+                //  0 and 1 are use to hide/show the entire scoreboard
+                //  2 = hide clock
+                //  3 = show clock
+                //  4 = hide down and distance panel
+                //  5 = show down and distance panel
+                //  7 = show everything as normal
+                url = globalSettings.baseurl + 'rest/db/scoreboard';
+                let body = { id: params, requester: context };
+                options = { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) };
+            }
+            console.log("url: " + url, JSON.stringify(options));
+            fetch(url, options)
             .then(function (response) {
                 if (!response.ok) {
                     // Set state to 1 to indicate that the scoreboard is on
@@ -734,51 +789,43 @@ const virtualKeyAction = {
         } else {
             console.log("No baseurl or settings", globalSettings, payload.settings);
         }
-    },
-
-    onVkeySendToPlugin: function (jsn) {
-        /**
-         * This is a message sent directly from the Property Inspector 
-        **/ 
-
-        const sdpi_collection = Utils.getProp(jsn, 'payload.sdpi_collection', {});
-        const payload = Utils.getProp(jsn, 'payload', {});
-        if (sdpi_collection.value && sdpi_collection.value !== undefined) {
-            console.log('onSendToPlugin', { [sdpi_collection.key] : sdpi_collection.value });      
-        } else {
-            updateGlobalSettings(payload);
-        }
-    },
+    }
 };
 
 const clockKeyAction = {
-
+    settings: {},
     onClockWillDisappear: function (jsn) {
         // If we have a baseURL, let's paint the clock using server-side events
         console.log("onWillDisappear", jsn);
         let found = keysCache[jsn.context];
         if(found) {
             // remove the clock from the cache
-            delete this.cache[jsn.context];
+            delete keysCache[jsn.context];
         }
     },
 
     onClockWillAppear: function (jsn) {
         // If we have a baseURL, let's paint the clock using server-side events
-        console.log("onWillAppear", jsn);
+        console.log("onClockWillAppear", jsn);
         const context = Utils.getProp(jsn, 'context', '');
-        let settings = Utils.getProp(jsn, 'payload.settings', {});
-        if (!settings.hasOwnProperty('url') && globalSettings.hasOwnProperty('baseurl')) {
-            settings.url = globalSettings.baseurl + 'events';
+        this.settings = Utils.getProp(jsn, 'payload.settings', {});
+        if (globalSettings.hasOwnProperty('baseurl')) {
+            connectServerEvents();
+        } else if (this.settings.hasOwnProperty('url') && this.settings.url.length > 12) {
+            globalSettings.baseurl = this.settings.url.substring(0, this.settings.url.indexOf("events"));
+            connectServerEvents();
         }
-        if (settings.hasOwnProperty('url') && settings.url.length > 12) {
-            const clock = new KeyFace(jsn);
-            // cache the current clock
-            keysCache[context] = clock;
-            var args = {time: currentClock, state: isClockRunning};
-            clock.drawKey(args);
-            $SD.api.setState(context, isClockRunning ? 1 : 0);
+        if (!this.settings.hasOwnProperty('url') && globalSettings.hasOwnProperty('baseurl') || 
+            (this.settings.hasOwnProperty('url') && globalSettings.hasOwnProperty('baseurl') && this.settings.url !== globalSettings.baseurl)) {
+            this.settings.url = globalSettings.baseurl + 'events';
+            $SD.api.setSettings(context, this.settings);
         }
+        const clock = new KeyFace(jsn);
+        // cache the current clock
+        keysCache[context] = clock;
+        var args = {time: currentClock, state: isClockRunning};
+        clock.drawKey(args);
+        $SD.api.setState(context, isClockRunning ? 1 : 0);
     },
 
     onClockKeyDown: function (jsn) {
@@ -842,19 +889,12 @@ const clockKeyAction = {
         }
     },
 
-    onClockSendToPlugin: function (jsn) {
-        /**
-         * This is a message sent directly from the Property Inspector 
-        **/ 
-
-        const sdpi_collection = Utils.getProp(jsn, 'payload.sdpi_collection', {});
-        const payload = Utils.getProp(jsn, 'payload', {});
-        if (sdpi_collection.value && sdpi_collection.value !== undefined) {
-            console.log('onSendToPlugin', { [sdpi_collection.key] : sdpi_collection.value });      
-        } else {
-            updateGlobalSettings(payload);
-        }
-    },
+    onClockPIDidDisappear: function (jsn) {
+        this.settings = Utils.getProp(jsn, 'payload.settings', {});
+        console.log("settings: " + JSON.stringify(this.settings));
+        this.settings.url = globalSettings.baseurl + "events";
+        $SD.api.setSettings(jsn.context, this.settings);
+    }
 };
 
 function scoreFace(canvas) {

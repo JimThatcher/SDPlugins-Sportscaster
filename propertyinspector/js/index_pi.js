@@ -120,12 +120,7 @@ $SD.on('connected', (jsn) => {
                     <option value='api/score/Timeout'>Timeout</option>
                     <option value='api/score/ChangePoss'>Possession</option>
                     <option value='api/score/Flag'>Flag</option>
-                </optgroup>
-                <optgroup label='Keypads'>
-                    <option value='clockkeys'>Set clock</option>
-                    <option value='homename'>Set home name</option>
-                    <option value='guestname'>Set guest name</option>
-                    <option value='contolpad-football'>Control Football</option>
+                    <option value='rest/db/scoreboard'>Show/hide clock</option>
                 </optgroup>
             </select>
         </div>
@@ -407,7 +402,8 @@ const updateKeyOptions = () => {
         }
     } else if (keytypeselect.value === 'api/score/HomeScore' || keytypeselect.value === 'api/score/GuestScore' ||
                 keytypeselect.value === 'api/score/ToGo' || keytypeselect.value === 'api/clock/Setup' ||
-                keytypeselect.value === 'api/clock/Reset' || keytypeselect.value === 'api/clock/Adjust') {
+                keytypeselect.value === 'api/clock/Reset' || keytypeselect.value === 'api/clock/Adjust' ||
+                keytypeselect.value === 'rest/db/scoreboard') {
         console.log("Selected item was score, togo, setup, reset, or adjust");
         document.getElementById('keyparam').style.display = 'flex';
         if (settings.hasOwnProperty('param')) {
@@ -522,7 +518,22 @@ $SD.on('piDataChanged', (returnValue) => {
         if (globalSettings.adTimeout !== adto) {
             sendValueToPlugin(adto, 'adTimeout');
         }
-    // TODO: Add playerimage path and sponsorimage path
+    } else if (returnValue.key === 'playerImagePath') {
+        // Save the new playerImagePath settings
+        let imgPath = returnValue.value;
+        console.log('playerImagePath:', imgPath);
+        // Save the new timeout settings
+        if (globalSettings.playerImagePath !== imgPath) {
+            sendValueToPlugin(imgPath, 'playerImagePath');
+        }
+    } else if (returnValue.key === 'sponsorImagePath') {
+        // Save the new sponsorImagePath settings
+        let imgPath = returnValue.value;
+        console.log('sponsorImagePath:', imgPath);
+        // Save the new timeout settings
+        if (globalSettings.sponsorImagePath !== imgPath) {
+            sendValueToPlugin(imgPath, 'sponsorImagePath');
+        }
     } else {
         console.log("Data changed: ", returnValue);
         /* SAVE THE VALUE TO SETTINGS */
