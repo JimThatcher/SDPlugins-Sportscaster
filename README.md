@@ -1,5 +1,5 @@
 # Elgato Stream Deck Plugin for Sports Streaming Overlays
-This plugin is for use with the 'Sports Streamer' web app at https://github.com/JimThatcher/sport-streamer to support control of the video overlays provided in the 'Sports Streamer' app. The plugin provides the following actions:
+This plugin is for use with the `Sports Streamer` web app at `https://github.com/JimThatcher/sport-streamer` to support control of the video overlays provided in the `Sports Streamer` app. The plugin provides the following actions:
 * Show / Hide the scoreboard overlay
 * Show / Hide (autohide) player hilight overlay for a specific player
 * Show / Hide (autohide) advertisment overlay for specific sponsor
@@ -11,5 +11,5 @@ The plugin includes pre-defined profiles for Stream Deck and Stream Deck XL for 
 
 ![image](https://user-images.githubusercontent.com/6655043/190545504-dbc1e0d1-6dd1-4430-a863-6e51062c62fa.png)
 
-A packaged version of the plugin is included in the Binaries folder of the 'Sports Streamer' repository. 
+A packaged version of the plugin is included in the Binaries folder of the `Sports Streamer` repository. 
 This plugin is based on the template provided by Elgato at https://github.com/elgatosf/streamdeck-plugintemplate.
